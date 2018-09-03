@@ -1,0 +1,95 @@
+1.Changing ticket category, in the ticket list view click on category
+	Next page allows you to add a message/reason
+	Can also change assignee
+	Can also adjust custom feilds
+	Click on change category in the bottom left corner
+
+2.Forwading a ticket, in the ticket list view, click on the specific ticket to open the detail view of the ticket
+	Click on more option on the top right
+	And click on forward
+	Add a email reciepient
+	Add attachements, all messages and private notes
+	Click on reply to frowaded message to manage actions ***
+	Add message
+
+3.Tagging tickets,Click on the title of the ticket
+	On the right there is a section for tags
+	click on + and enter the tag name
+	New event gets generated for the ticket
+
+4.Adding CC and BCC, Click on the title of the ticket
+	Click on the reply button on the bottom left of the detail view page
+	This will open the reply editor
+	There are CC and BCC feilds
+	You can update the status of the ticket
+
+5.Add KB( Knowledge base) articles
+	Click on the grey text titled (Please see attached) under the ticket title in the ticket view pane to see a preview of the ticket
+	On the preview frame there is a reply button on the bottom left of the frame
+	Next to the canned action button, there is a Insert KB option, this will pull all the KB articles.
+	Now select the relavant option
+	Edit the message and send it
+
+6.Canned action,
+	Click on the grey text to open the preview pane
+	Click on the canned action button
+	And select the canned action
+
+7.Sucbribing to tickets
+	Helps you or others in the loop for the ticket. 
+	Will send an email for each action applied to the ticket
+	To subscribe your self to the ticket
+		- click on the star button on the ticket in the ticket view page
+	To add others
+		- open the ticket
+		- there is a plus button on the right below the ticket title bock, 
+		- use that to add subscribers
+
+8.Quick ticket actions/options
+	-status
+	-assinee
+	-priority level
+	-category
+	-due date
+	-can also be accessed by the drop down box
+	-also on the message page
+
+9. Quick preview
+	-click on the grey line item under the subject of the ticket
+
+10.Pinning a ticket
+	-click on the pin icon on the ticket in the ticket view page
+	-pin bar will display all the pined tickets
+	-Grey dot indicates that the agent was the last actionee
+	-red dot incicates that the enduser was the last cationee
+	-red explanimation sysmbol indicated a sla breach
+
+11. Updating tickets
+	- in the ticket list view
+		- tickets can be sorted by catogeries
+	- Ticket view has a lot of data
+		- Action list
+		- contact infromation
+		- can create tasks
+		- can tags
+		- also has time spent on the ticket
+		- close on the top right corner
+		- top left corner has the latest updates on the tickets
+
+
+
+12. Searching sorting and filtering tickets
+	- can be sorted using the drop down on the top right of the ticket list view
+	- using apply filter, 
+		- you can create a new filter
+			- has options for match all or match any
+			- new filter can be saved
+
+13. Private notes
+	- In the the ticket view, click on private notes on the bottom left
+	- change asignee
+	- real time agent 
+
+14.Custom Queues 
+	- on the ticket navigation bar, click on the + button next to queus
+
