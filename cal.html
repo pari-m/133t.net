@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Birthday Calendar File</title>
+<style>
+  :root{
+    --paper:#faf7f2;
+    --ink:#221f2b;
+    --ink-soft:#5a5563;
+    --line:#e4ddd2;
+    --plum:#4a2c53;
+    --coral:#e0684f;
+    --gold:#d99b3c;
+    --field:#f3eee6;
+    --ok:#2f7d54;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:
+      radial-gradient(circle at 12% 8%, rgba(224,104,79,.10), transparent 40%),
+      radial-gradient(circle at 88% 92%, rgba(74,44,83,.10), transparent 42%),
+      var(--paper);
+    color:var(--ink);
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:28px 18px;
+    line-height:1.5;
+  }
+  .card{
+    width:100%;
+    max-width:440px;
+    background:#fffdfa;
+    border:1px solid var(--line);
+    border-radius:20px;
+    box-shadow:0 22px 50px -28px rgba(34,31,43,.35);
+    overflow:hidden;
+  }
+  .head{
+    padding:26px 28px 20px;
+    border-bottom:1px dashed var(--line);
+    position:relative;
+  }
+  .head::after{ /* stitched-card edge dots */
+    content:"";position:absolute;left:0;right:0;bottom:-6px;height:12px;
+    background:radial-gradient(circle at center, var(--paper) 5px, transparent 6px);
+    background-size:18px 12px;background-position:center;
+  }
+  .eyebrow{
+    font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--coral);font-weight:700;margin:0 0 6px;
+  }
+  h1{
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:27px;line-height:1.15;margin:0;font-weight:600;color:var(--plum);
+  }
+  .sub{margin:8px 0 0;font-size:13.5px;color:var(--ink-soft);}
+  .body{padding:24px 28px 8px;}
+  label{display:block;font-size:12.5px;font-weight:700;letter-spacing:.02em;margin:0 0 7px;color:var(--ink);}
+  .field{
+    width:100%;font-size:15px;font-family:inherit;color:var(--ink);
+    background:var(--field);border:1px solid var(--line);border-radius:11px;
+    padding:12px 14px;transition:border-color .15s, box-shadow .15s;
+  }
+  .field:focus{outline:none;border-color:var(--plum);box-shadow:0 0 0 3px rgba(74,44,83,.14);}
+  .row{margin-bottom:18px;}
+
+  .preview{
+    margin:6px 0 20px;background:var(--field);border:1px solid var(--line);
+    border-radius:12px;padding:14px 16px;
+  }
+  .preview .plabel{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);margin:0 0 8px;font-weight:700;}
+  .pline{display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--ink-soft);padding:3px 0;}
+  .pline b{color:var(--ink);font-weight:600;}
+  .pico{width:16px;text-align:center;flex:none;opacity:.7;}
+  #pTitle{color:var(--plum);font-weight:700;}
+
+  button{
+    width:100%;font-family:inherit;font-size:15px;font-weight:700;letter-spacing:.01em;
+    color:#fff;background:var(--plum);border:none;border-radius:12px;
+    padding:14px;cursor:pointer;transition:transform .08s, background .15s, opacity .15s;
+  }
+  button:hover{background:#3a2141;}
+  button:active{transform:translateY(1px);}
+  button:disabled{opacity:.5;cursor:not-allowed;background:var(--ink-soft);}
+
+  .toast{
+    text-align:center;font-size:13px;color:var(--ok);font-weight:600;
+    height:20px;margin:12px 0 4px;opacity:0;transition:opacity .2s;
+  }
+  .toast.show{opacity:1;}
+
+  .foot{
+    padding:12px 28px 22px;border-top:1px dashed var(--line);
+    font-size:11.5px;color:var(--ink-soft);
+  }
+  .foot ul{margin:6px 0 0;padding-left:16px;}
+  .foot li{margin:2px 0;}
+  @media (prefers-reduced-motion: reduce){*{transition:none!important;}}
+</style>
+</head>
+<body>
+  <main class="card">
+    <div class="head">
+      <p class="eyebrow">Add to your calendar</p>
+      <h1>Never miss a birthday</h1>
+      <p class="sub">Enter a name and a date. You'll get a calendar file that repeats every year, with the same reminders and settings as the event.</p>
+    </div>
+
+    <div class="body">
+      <div class="row">
+        <label for="name">Whose birthday?</label>
+        <input class="field" id="name" type="text" placeholder="e.g. Pari" autocomplete="off">
+      </div>
+
+      <div class="row">
+        <label for="date">Date of birthday</label>
+        <input class="field" id="date" type="date" value="2026-07-30">
+      </div>
+
+      <div class="preview">
+        <p class="plabel">What you'll get</p>
+        <div class="pline"><span class="pico">🎂</span><span id="pTitle">Someone's Birthday</span></div>
+        <div class="pline"><span class="pico">📅</span><span><b id="pDate">—</b> · all day · repeats every year</span></div>
+        <div class="pline"><span class="pico">🔔</span><span>Reminder the night before at <b>11:30pm</b></span></div>
+        <div class="pline"><span class="pico">🔔</span><span>Reminder on the day at <b>9:00am</b></span></div>
+        <div class="pline"><span class="pico">🟢</span><span>Shows as <b>Free</b> · default visibility</span></div>
+      </div>
+
+      <button id="go">Download calendar file (.ics)</button>
+      <div class="toast" id="toast">Saved — open the file to add it to your calendar</div>
+    </div>
+
+    <div class="foot">
+      Works with Google Calendar, Apple Calendar, and Outlook.
+      <ul>
+        <li>The two reminders are written as email alerts, matching the original event.</li>
+        <li>Some apps turn imported reminders into pop-up alerts — that's the app's choice, not the file's.</li>
+      </ul>
+    </div>
+  </main>
+
+<script>
+  const nameEl  = document.getElementById('name');
+  const dateEl  = document.getElementById('date');
+  const goEl    = document.getElementById('go');
+  const toastEl = document.getElementById('toast');
+  const pTitle  = document.getElementById('pTitle');
+  const pDate   = document.getElementById('pDate');
+
+  // ----- Live preview -----
+  function possessive(n){ return /s$/i.test(n) ? n + "'" : n + "'s"; }
+  function refresh(){
+    const n = nameEl.value.trim();
+    pTitle.textContent = (n ? possessive(n) : "Someone's") + " Birthday";
+    if (dateEl.value){
+      const [y,m,d] = dateEl.value.split('-').map(Number);
+      pDate.textContent = new Date(Date.UTC(y,m-1,d))
+        .toLocaleDateString(undefined,{month:'long',day:'numeric',timeZone:'UTC'});
+    } else {
+      pDate.textContent = "—";
+    }
+    goEl.disabled = !(n && dateEl.value);
+  }
+  nameEl.addEventListener('input', refresh);
+  dateEl.addEventListener('input', refresh);
+
+  // ----- ICS helpers -----
+  function pad(n){ return String(n).padStart(2,'0'); }
+  function ymd(dt){ return dt.getUTCFullYear() + pad(dt.getUTCMonth()+1) + pad(dt.getUTCDate()); }
+  function stamp(){
+    const d = new Date();
+    return d.getUTCFullYear()+pad(d.getUTCMonth()+1)+pad(d.getUTCDate())
+      +'T'+pad(d.getUTCHours())+pad(d.getUTCMinutes())+pad(d.getUTCSeconds())+'Z';
+  }
+  function esc(t){ return t.replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\n/g,'\\n'); }
+
+  function buildICS(name, dateStr){
+    const [y,m,d] = dateStr.split('-').map(Number);
+    const start = new Date(Date.UTC(y, m-1, d));      // all-day start (midnight)
+    const end   = new Date(Date.UTC(y, m-1, d+1));    // all-day end = next day
+    const title = esc(possessive(name.trim()) + " Birthday");
+    const uid   = 'bday-' + ymd(start) + '-' + Math.random().toString(36).slice(2,10) + '@birthday.local';
+
+    // "1 day before at 11:30pm" -> 30 min before midnight start -> -PT30M
+    // "0 days before at 9:00am" -> 9 hours after midnight start  -> PT9H
+    const lines = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//Birthday Generator//EN',
+      'CALSCALE:GREGORIAN',
+      'METHOD:PUBLISH',
+      'BEGIN:VEVENT',
+      'UID:' + uid,
+      'DTSTAMP:' + stamp(),
+      'DTSTART;VALUE=DATE:' + ymd(start),
+      'DTEND;VALUE=DATE:' + ymd(end),
+      'RRULE:FREQ=YEARLY',
+      'SUMMARY:' + title,
+      'TRANSP:TRANSPARENT',
+      'BEGIN:VALARM',
+      'ACTION:EMAIL',
+      'TRIGGER:-PT30M',
+      'SUMMARY:' + title,
+      'DESCRIPTION:' + title,
+      'END:VALARM',
+      'BEGIN:VALARM',
+      'ACTION:EMAIL',
+      'TRIGGER:PT9H',
+      'SUMMARY:' + title,
+      'DESCRIPTION:' + title,
+      'END:VALARM',
+      'END:VEVENT',
+      'END:VCALENDAR'
+    ];
+    return lines.join('\r\n');
+  }
+
+  goEl.addEventListener('click', () => {
+    const name = nameEl.value.trim();
+    if (!name || !dateEl.value) return;
+    const ics = buildICS(name, dateEl.value);
+    const blob = new Blob([ics], {type:'text/calendar;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name.replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'') + '-birthday.ics';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    toastEl.classList.add('show');
+    setTimeout(() => toastEl.classList.remove('show'), 3200);
+  });
+
+  refresh();
+</script>
+</body>
+</html>
