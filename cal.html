@@ -88,6 +88,12 @@
   button:hover{background:#3a2141;}
   button:active{transform:translateY(1px);}
   button:disabled{opacity:.5;cursor:not-allowed;background:var(--ink-soft);}
+  button.secondary{
+    margin-top:10px;color:var(--plum);background:transparent;
+    border:1px solid var(--line);
+  }
+  button.secondary:hover{background:var(--field);}
+  button.secondary:disabled{background:transparent;color:var(--ink-soft);border-color:var(--line);}
 
   .toast{
     text-align:center;font-size:13px;color:var(--ok);font-weight:600;
@@ -132,7 +138,8 @@
         <div class="pline"><span class="pico">🟢</span><span>Shows as <b>Free</b> · default visibility</span></div>
       </div>
 
-      <button id="go">Download calendar file (.ics)</button>
+      <button id="go">Download calendar file (.ics, with reminders)</button>
+      <button id="gcal" class="secondary">Add in Google Calendar (no reminders)</button>
       <div class="toast" id="toast">Saved — open the file to add it to your calendar</div>
     </div>
 
@@ -149,6 +156,7 @@
   const nameEl  = document.getElementById('name');
   const dateEl  = document.getElementById('date');
   const goEl    = document.getElementById('go');
+  const gcalEl  = document.getElementById('gcal');
   const toastEl = document.getElementById('toast');
   const pTitle  = document.getElementById('pTitle');
   const pDate   = document.getElementById('pDate');
@@ -165,7 +173,9 @@
     } else {
       pDate.textContent = "—";
     }
-    goEl.disabled = !(n && dateEl.value);
+    const ready = !!(n && dateEl.value);
+    goEl.disabled = !ready;
+    gcalEl.disabled = !ready;
   }
   nameEl.addEventListener('input', refresh);
   dateEl.addEventListener('input', refresh);
@@ -237,6 +247,20 @@
 
     toastEl.classList.add('show');
     setTimeout(() => toastEl.classList.remove('show'), 3200);
+  });
+
+  gcalEl.addEventListener('click', () => {
+    const name = nameEl.value.trim();
+    if (!name || !dateEl.value) return;
+    const [y,m,d] = dateEl.value.split('-').map(Number);
+    const start = new Date(Date.UTC(y, m-1, d));
+    const end   = new Date(Date.UTC(y, m-1, d+1));
+    const title = possessive(name) + " Birthday";
+    const url = 'https://calendar.google.com/calendar/render?action=TEMPLATE'
+      + '&text=' + encodeURIComponent(title)
+      + '&dates=' + ymd(start) + '/' + ymd(end)
+      + '&recur=' + encodeURIComponent('RRULE:FREQ=YEARLY');
+    window.open(url, '_blank', 'noopener');
   });
 
   refresh();
