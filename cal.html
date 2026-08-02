@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Birthday Calendar File</title>
+<title>Calendar File Generator</title>
 <style>
   :root{
     --paper:#faf7f2;
@@ -114,24 +114,38 @@
   <main class="card">
     <div class="head">
       <p class="eyebrow">Add to your calendar</p>
-      <h1>Never miss a birthday</h1>
+      <h1>Never miss a date</h1>
       <p class="sub">Enter a name and a date. You'll get a calendar file that repeats every year, with the same reminders and settings as the event.</p>
     </div>
 
     <div class="body">
       <div class="row">
-        <label for="name">Whose birthday?</label>
+        <label for="type">Occasion</label>
+        <select class="field" id="type">
+          <option value="Birthday">Birthday</option>
+          <option value="Anniversary">Anniversary</option>
+          <option value="Other">Other…</option>
+        </select>
+      </div>
+
+      <div class="row" id="otherRow" style="display:none;">
+        <label for="other">What kind?</label>
+        <input class="field" id="other" type="text" placeholder="e.g. Graduation" autocomplete="off">
+      </div>
+
+      <div class="row">
+        <label for="name">Whose is it?</label>
         <input class="field" id="name" type="text" placeholder="e.g. Pari" autocomplete="off">
       </div>
 
       <div class="row">
-        <label for="date">Date of birthday</label>
+        <label for="date">Date</label>
         <input class="field" id="date" type="date" value="2026-07-30">
       </div>
 
       <div class="preview">
         <p class="plabel">What you'll get</p>
-        <div class="pline"><span class="pico">🎂</span><span id="pTitle">Someone's Birthday</span></div>
+        <div class="pline"><span class="pico" id="pIcon">🎂</span><span id="pTitle">Someone's Birthday</span></div>
         <div class="pline"><span class="pico">📅</span><span><b id="pDate">—</b> · all day · repeats every year</span></div>
         <div class="pline"><span class="pico">🔔</span><span>Reminder the night before at <b>11:30pm</b></span></div>
         <div class="pline"><span class="pico">🔔</span><span>Reminder on the day at <b>9:00am</b></span></div>
@@ -139,7 +153,7 @@
       </div>
 
       <button id="go">Download calendar file (.ics, with reminders)</button>
-      <button id="gcal" class="secondary">Add in Google Calendar (no reminders)</button>
+      <button id="gcal" class="secondary">Open Google Calendar import page</button>
       <div class="toast" id="toast">Saved — open the file to add it to your calendar</div>
     </div>
 
@@ -153,19 +167,32 @@
   </main>
 
 <script>
+  const typeEl  = document.getElementById('type');
+  const otherEl = document.getElementById('other');
+  const otherRow= document.getElementById('otherRow');
   const nameEl  = document.getElementById('name');
   const dateEl  = document.getElementById('date');
   const goEl    = document.getElementById('go');
   const gcalEl  = document.getElementById('gcal');
   const toastEl = document.getElementById('toast');
   const pTitle  = document.getElementById('pTitle');
+  const pIcon   = document.getElementById('pIcon');
   const pDate   = document.getElementById('pDate');
+
+  const ICONS = { Birthday:'🎂', Anniversary:'💍', Other:'🎉' };
 
   // ----- Live preview -----
   function possessive(n){ return /s$/i.test(n) ? n + "'" : n + "'s"; }
+  function occasion(){
+    if (typeEl.value === 'Other') return otherEl.value.trim();
+    return typeEl.value;
+  }
   function refresh(){
+    otherRow.style.display = (typeEl.value === 'Other') ? '' : 'none';
     const n = nameEl.value.trim();
-    pTitle.textContent = (n ? possessive(n) : "Someone's") + " Birthday";
+    const occ = occasion();
+    pIcon.textContent = ICONS[typeEl.value] || '🎉';
+    pTitle.textContent = (n ? possessive(n) : "Someone's") + " " + (occ || "…");
     if (dateEl.value){
       const [y,m,d] = dateEl.value.split('-').map(Number);
       pDate.textContent = new Date(Date.UTC(y,m-1,d))
@@ -173,10 +200,11 @@
     } else {
       pDate.textContent = "—";
     }
-    const ready = !!(n && dateEl.value);
+    const ready = !!(n && dateEl.value && occ);
     goEl.disabled = !ready;
-    gcalEl.disabled = !ready;
   }
+  typeEl.addEventListener('change', refresh);
+  otherEl.addEventListener('input', refresh);
   nameEl.addEventListener('input', refresh);
   dateEl.addEventListener('input', refresh);
 
@@ -194,8 +222,8 @@
     const [y,m,d] = dateStr.split('-').map(Number);
     const start = new Date(Date.UTC(y, m-1, d));      // all-day start (midnight)
     const end   = new Date(Date.UTC(y, m-1, d+1));    // all-day end = next day
-    const title = esc(possessive(name.trim()) + " Birthday");
-    const uid   = 'bday-' + ymd(start) + '-' + Math.random().toString(36).slice(2,10) + '@birthday.local';
+    const title = esc(possessive(name.trim()) + " " + occasion());
+    const uid   = 'evt-' + ymd(start) + '-' + Math.random().toString(36).slice(2,10) + '@birthday.local';
 
     // "1 day before at 11:30pm" -> 30 min before midnight start -> -PT30M
     // "0 days before at 9:00am" -> 9 hours after midnight start  -> PT9H
@@ -233,13 +261,14 @@
 
   goEl.addEventListener('click', () => {
     const name = nameEl.value.trim();
-    if (!name || !dateEl.value) return;
+    if (!name || !dateEl.value || !occasion()) return;
     const ics = buildICS(name, dateEl.value);
     const blob = new Blob([ics], {type:'text/calendar;charset=utf-8'});
     const url = URL.createObjectURL(blob);
+    const slug = (name + '-' + occasion()).replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'').toLowerCase();
     const a = document.createElement('a');
     a.href = url;
-    a.download = name.replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'') + '-birthday.ics';
+    a.download = slug + '.ics';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -250,17 +279,7 @@
   });
 
   gcalEl.addEventListener('click', () => {
-    const name = nameEl.value.trim();
-    if (!name || !dateEl.value) return;
-    const [y,m,d] = dateEl.value.split('-').map(Number);
-    const start = new Date(Date.UTC(y, m-1, d));
-    const end   = new Date(Date.UTC(y, m-1, d+1));
-    const title = possessive(name) + " Birthday";
-    const url = 'https://calendar.google.com/calendar/render?action=TEMPLATE'
-      + '&text=' + encodeURIComponent(title)
-      + '&dates=' + ymd(start) + '/' + ymd(end)
-      + '&recur=' + encodeURIComponent('RRULE:FREQ=YEARLY');
-    window.open(url, '_blank', 'noopener');
+    window.open('https://calendar.google.com/calendar/u/0/r/settings/export', '_blank', 'noopener');
   });
 
   refresh();
