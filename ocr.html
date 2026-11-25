@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OCR</title>
+<style>
+  :root { --fg:#1a1a1a; --muted:#6b6b6b; --line:#e2e2e2; --accent:#2f5bea; --ok:#1d8a4e; --bad:#c43c3c; }
+  * { box-sizing: border-box; }
+  body { font: 15px/1.5 system-ui, -apple-system, sans-serif; color: var(--fg); margin: 0;
+         min-height: 100vh; display: grid; place-items: center; background: #fafafa; }
+  main { width: min(480px, 92vw); background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 28px; }
+  h1 { font-size: 20px; margin: 0 0 20px; }
+  label.drop { display: block; border: 2px dashed var(--line); border-radius: 10px; padding: 28px 16px;
+               text-align: center; color: var(--muted); cursor: pointer; transition: border-color .15s; }
+  label.drop:hover, label.drop.over { border-color: var(--accent); }
+  label.drop strong { color: var(--fg); }
+  input[type=file] { display: none; }
+  .row { display: flex; gap: 10px; margin-top: 16px; }
+  button { flex: 1; font: inherit; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--accent);
+           background: var(--accent); color: #fff; cursor: pointer; }
+  button.secondary { background: #fff; color: var(--accent); }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  #status { margin-top: 18px; padding: 12px 14px; border-radius: 8px; background: #f4f4f4; min-height: 1.5em; }
+  #status.ok { background: #e8f5ee; color: var(--ok); }
+  #status.bad { background: #fbeaea; color: var(--bad); }
+  .meta { font-size: 13px; color: var(--muted); margin-top: 8px; }
+  .server { display: flex; gap: 8px; align-items: end; margin-bottom: 18px; }
+  .server label { display: flex; flex-direction: column; font-size: 13px; color: var(--muted); gap: 4px; }
+  .server label.host { flex: 1; }
+  .server input { font: inherit; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; width: 100%; }
+  .server label.port { width: 90px; }
+  .server button { flex: 0 0 auto; padding: 8px 12px; }
+  #conn { font-size: 13px; margin: -10px 0 16px; color: var(--muted); }
+  #conn.ok { color: var(--ok); } #conn.bad { color: var(--bad); }
+</style>
+</head>
+<body>
+<main>
+  <h1>OCR a document</h1>
+
+  <div class="server">
+    <label class="host">Server IP / host<input id="host" placeholder="192.168.1.50" autocomplete="off"></label>
+    <label class="port">Port<input id="port" inputmode="numeric" placeholder="8000" autocomplete="off"></label>
+    <button id="testBtn" class="secondary">Test</button>
+  </div>
+  <div id="conn">Not checked.</div>
+
+  <label class="drop" id="drop">
+    <input type="file" id="file" accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff,.bmp,.webp">
+    <span id="dropText"><strong>Choose a file</strong> or drop it here<br>PDF or image</span>
+  </label>
+
+  <div class="row">
+    <button id="uploadBtn" disabled>Upload</button>
+    <button id="checkBtn" class="secondary" disabled>Is it done?</button>
+  </div>
+
+  <div id="status">No file uploaded yet.</div>
+  <div class="meta" id="meta"></div>
+</main>
+
+<script>
+  const POLL_MS = 5000;
+
+  // ── Server address (IP + port), remembered in this browser ──
+  const hostInput = document.getElementById("host"), portInput = document.getElementById("port");
+  const servedByServer = location.protocol.startsWith("http");
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+  };
+  hostInput.value = store.get("ocr.host") || (servedByServer ? location.hostname : "localhost");
+  portInput.value = store.get("ocr.port") || (servedByServer ? (location.port || (location.protocol === "https:" ? "443" : "80")) : "8000");
+
+  function apiBase() {
+    let host = hostInput.value.trim().replace(/^https?:\/\//, "").replace(/\/+$/, "") || "localhost";
+    if (host.includes(":") && !host.startsWith("[")) host = `[${host}]`;  // bare IPv6
+    const port = portInput.value.trim() || "8000";
+    return `http://${host}:${port}`;
+  }
+
+  function saveServer() {
+    store.set("ocr.host", hostInput.value.trim());
+    store.set("ocr.port", portInput.value.trim());
+  }
+  [hostInput, portInput].forEach(el => el.addEventListener("change", () => { saveServer(); testServer(); }));
+
+  async function testServer() {
+    const conn = document.getElementById("conn");
+    conn.className = ""; conn.textContent = `Checking ${apiBase()}…`;
+    try {
+      const res = await fetch(`${apiBase()}/health`, { signal: AbortSignal.timeout(5000) });
+      const h = await res.json();
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      conn.className = "ok";
+      conn.textContent = `Connected to ${apiBase()} · backend: ${h.backend} · ${h.workers} workers`;
+    } catch (e) {
+      conn.className = "bad";
+      conn.textContent = `Can't reach ${apiBase()} (${e.name === "TimeoutError" ? "timed out" : e.message})`;
+    }
+  }
+
+  // State held in memory
+  let currentFile = null;   // File chosen in the picker
+  let jobName = null;       // filename the server is processing
+  let jobBase = null;       // server the job was sent to
+  let pollTimer = null;
+  let downloaded = false;
+
+  const $ = id => document.getElementById(id);
+  const fileInput = $("file"), drop = $("drop"), uploadBtn = $("uploadBtn"), checkBtn = $("checkBtn");
+
+  function setStatus(msg, kind = "") {
+    $("status").textContent = msg;
+    $("status").className = kind;
+  }
+
+  function pickFile(f) {
+    if (!f) return;
+    currentFile = f;
+    $("dropText").innerHTML = `<strong>${f.name.replace(/</g, "&lt;")}</strong><br>${(f.size / 1024 / 1024).toFixed(2)} MB`;
+    uploadBtn.disabled = false;
+  }
+
+  fileInput.addEventListener("change", () => pickFile(fileInput.files[0]));
+  ["dragenter", "dragover"].forEach(e => drop.addEventListener(e, ev => { ev.preventDefault(); drop.classList.add("over"); }));
+  ["dragleave", "drop"].forEach(e => drop.addEventListener(e, ev => { ev.preventDefault(); drop.classList.remove("over"); }));
+  drop.addEventListener("drop", ev => pickFile(ev.dataTransfer.files[0]));
+
+  async function upload() {
+    if (!currentFile) return;
+    stopPolling();
+    downloaded = false;
+    uploadBtn.disabled = true;
+    setStatus(`Uploading ${currentFile.name}…`);
+
+    const form = new FormData();
+    form.append("file", currentFile);
+    try {
+      const res = await fetch(`${apiBase()}/ocr`, { method: "POST", body: form });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.detail || `HTTP ${res.status}`);
+      jobName = body.filename;
+      jobBase = apiBase();
+      checkBtn.disabled = false;
+      setStatus(`Processing ${jobName}… checking every ${POLL_MS / 1000} s.`);
+      startPolling();
+    } catch (e) {
+      setStatus(`Upload failed: ${e.message}`, "bad");
+    } finally {
+      uploadBtn.disabled = false;
+    }
+  }
+
+  async function check() {
+    if (!jobName) return;
+    $("meta").textContent = `Last checked ${new Date().toLocaleTimeString()}`;
+    try {
+      const res = await fetch(`${jobBase}/ocr/${encodeURIComponent(jobName)}`);
+      const job = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(job.detail || `HTTP ${res.status}`);
+
+      if (job.status === "processing") {
+        setStatus(`Still processing ${jobName}…`);
+      } else if (job.status === "done") {
+        stopPolling();
+        setStatus(`Done in ${(job.elapsed_ms / 1000).toFixed(1)} s. Downloaded ${txtName(jobName)}.`, "ok");
+        if (!downloaded) { downloaded = true; download(job.text || "", txtName(jobName)); }
+      } else {
+        stopPolling();
+        setStatus(`OCR failed: ${job.error || "unknown error"}`, "bad");
+      }
+    } catch (e) {
+      setStatus(`Check failed: ${e.message}`, "bad");
+    }
+  }
+
+  function txtName(name) { return name.replace(/\.[^.]+$/, "") + ".txt"; }
+
+  function download(text, name) {
+    const url = URL.createObjectURL(new Blob([text], { type: "text/plain;charset=utf-8" }));
+    const a = Object.assign(document.createElement("a"), { href: url, download: name });
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  function startPolling() { stopPolling(); pollTimer = setInterval(check, POLL_MS); }
+  function stopPolling() { if (pollTimer) clearInterval(pollTimer); pollTimer = null; }
+
+  uploadBtn.addEventListener("click", upload);
+  document.getElementById("testBtn").addEventListener("click", () => { saveServer(); testServer(); });
+  testServer();
+  checkBtn.addEventListener("click", () => { downloaded = false; check(); });
+</script>
+</body>
+</html>
